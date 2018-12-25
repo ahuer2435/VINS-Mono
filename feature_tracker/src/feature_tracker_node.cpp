@@ -25,8 +25,10 @@ bool first_image_flag = true;
 double last_image_time = 0;
 bool init_pub = 0;
 
+//1. 使用const指针,const 变量引用,避免拷贝,不许修改源数据.
 void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
+    //获取第一帧时间戳.
     if(first_image_flag)
     {
         first_image_flag = false;
@@ -35,6 +37,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         return;
     }
     // detect unstable camera stream
+    //检测当前帧是否有效,当前帧与上一帧差1s或者当前帧时间戳小于上一帧,判断特征跟踪失败,重启特征跟踪.
     if (img_msg->header.stamp.toSec() - last_image_time > 1.0 || img_msg->header.stamp.toSec() < last_image_time)
     {
         ROS_WARN("image discontinue! reset the feature tracker!");
@@ -62,7 +65,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         PUB_THIS_FRAME = false;
 
     cv_bridge::CvImageConstPtr ptr;
-    if (img_msg->encoding == "8UC1")
+    if (img_msg->encoding == "8UC1")        //有必要区别吗?
     {
         sensor_msgs::Image img;
         img.header = img_msg->header;
@@ -70,9 +73,9 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         img.width = img_msg->width;
         img.is_bigendian = img_msg->is_bigendian;
         img.step = img_msg->step;
-        img.data = img_msg->data;
+        img.data = img_msg->data;   //是指针操作还是数据copy?
         img.encoding = "mono8";
-        ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
+        ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);    //这里有copy数据,所以前一个应该只是指针copy.
     }
     else
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::MONO8);
@@ -82,7 +85,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
         ROS_DEBUG("processing camera %d", i);
-        if (i != 1 || !STEREO_TRACK)
+        if (i != 1 || !STEREO_TRACK)    //STEREO_TRACK 配置为false,这一步会走.
             trackerData[i].readImage(ptr->image.rowRange(ROW * i, ROW * (i + 1)), img_msg->header.stamp.toSec());
         else
         {
