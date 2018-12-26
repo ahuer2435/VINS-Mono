@@ -82,9 +82,10 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 {
     cv::Mat img;
     TicToc t_r;
-    cur_time = _cur_time;
+    cur_time = _cur_time;       //当前帧的时间
 
-    if (EQUALIZE)
+    //图像处理，在图像太暗或者太亮，均衡图像。
+    if (EQUALIZE)               //配置为1
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
         TicToc t_c;
@@ -92,9 +93,10 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         ROS_DEBUG("CLAHE costs: %fms", t_c.toc());
     }
     else
-        img = _img;
+        img = _img;             //mat 类型的赋值，到底有没有数据复制？
 
-    if (forw_img.empty())
+    //设置下一帧图像forw_img
+    if (forw_img.empty())   //当前帧为最后一帧。
     {
         prev_img = cur_img = forw_img = img;
     }
@@ -110,11 +112,13 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         TicToc t_o;
         vector<uchar> status;
         vector<float> err;
+        //由当前帧，当前帧特征点，下一帧，计算下一帧特征点forw_pts。利用稀疏光流法求解。
         cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
 
         for (int i = 0; i < int(forw_pts.size()); i++)
             if (status[i] && !inBorder(forw_pts[i]))
                 status[i] = 0;
+        //根据求解的状态向量，设置前一帧特征点、当前帧特征点、下一帧特征点、ids，当前正归一化特征点、跟踪特征点数目向量的大小。        
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
@@ -137,7 +141,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 
         ROS_DEBUG("detect feature begins");
         TicToc t_t;
-        int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
+        int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());    //MAX_CNT 要跟踪的最大特征点数。设置为150
         if (n_max_cnt > 0)
         {
             if(mask.empty())
@@ -146,6 +150,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
                 cout << "mask type wrong " << endl;
             if (mask.size() != forw_img.size())
                 cout << "wrong size " << endl;
+            //从下一帧提取特征点（角点）n_pts
             cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.01, MIN_DIST, mask);
         }
         else
@@ -157,6 +162,8 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         addPoints();
         ROS_DEBUG("selectFeature costs: %fms", t_a.toc());
     }
+
+    //进入下一时刻，当前帧、特征点变为上一帧、特征点，下一帧、特征点变为当前帧、特征点。
     prev_img = cur_img;
     prev_pts = cur_pts;
     prev_un_pts = cur_un_pts;
@@ -166,6 +173,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
     prev_time = cur_time;
 }
 
+//ransac 删除无效特征点
 void FeatureTracker::rejectWithF()
 {
     if (forw_pts.size() >= 8)
@@ -255,6 +263,7 @@ void FeatureTracker::showUndistortion(const string &name)
     cv::waitKey(0);
 }
 
+//不失真点
 void FeatureTracker::undistortedPoints()
 {
     cur_un_pts.clear();
