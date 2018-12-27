@@ -103,6 +103,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
 #endif
     }
 
+    //更新新的特征点的id,从老的特征点＋1开始.
     for (unsigned int i = 0;; i++)
     {
         bool completed = false;
