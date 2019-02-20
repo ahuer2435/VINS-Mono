@@ -209,6 +209,8 @@ void FeatureTracker::rejectWithF()
     }
 }
 
+//对于新检测的角点, 更新id.
+//当i 超过id 的容量,返回false,
 bool FeatureTracker::updateID(unsigned int i)
 {
     if (i < ids.size())
