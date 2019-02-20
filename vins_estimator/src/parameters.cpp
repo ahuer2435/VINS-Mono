@@ -42,7 +42,7 @@ T readParam(ros::NodeHandle &n, std::string name)
 void readParameters(ros::NodeHandle &n)
 {
     std::string config_file;
-    config_file = readParam<std::string>(n, "config_file");
+    config_file = readParam<std::string>(n, "config_file");      //config_file 在launch文件中设置为euroc_config.yaml
     cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
     if(!fsSettings.isOpened())
     {
