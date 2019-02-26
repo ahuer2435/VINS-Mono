@@ -33,11 +33,11 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
     {
         first_image_flag = false;
         first_image_time = img_msg->header.stamp.toSec();
-        last_image_time = img_msg->header.stamp.toSec();
+        last_image_time = img_msg->header.stamp.toSec();    //上一帧
         return;
     }
     // detect unstable camera stream
-    //检测当前帧是否有效,当前帧与上一帧差1s或者当前帧时间戳小于上一帧,判断特征跟踪失败,重启特征跟踪.
+    //检测当前帧是否有效,当前帧与上一帧差1s或者当前帧时间戳小于上一帧,判断特征跟踪失败,重启特征跟踪.正常不成立。
     if (img_msg->header.stamp.toSec() - last_image_time > 1.0 || img_msg->header.stamp.toSec() < last_image_time)
     {
         ROS_WARN("image discontinue! reset the feature tracker!");
@@ -49,9 +49,10 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         pub_restart.publish(restart_flag);
         return;
     }
-    last_image_time = img_msg->header.stamp.toSec();
-    // frequency control
-    if (round(1.0 * pub_count / (img_msg->header.stamp.toSec() - first_image_time)) <= FREQ)
+    last_image_time = img_msg->header.stamp.toSec();    //更新上一帧时间戳
+    
+    // frequency control？？
+    if (round(1.0 * pub_count / (img_msg->header.stamp.toSec() - first_image_time)) <= FREQ)    //FREQ 默认为10
     {
         PUB_THIS_FRAME = true;
         // reset the frequency control
@@ -65,7 +66,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         PUB_THIS_FRAME = false;
 
     cv_bridge::CvImageConstPtr ptr;
-    if (img_msg->encoding == "8UC1")        //有必要区别吗?
+    if (img_msg->encoding == "8UC1")        //有必要区别吗?，不明白
     {
         sensor_msgs::Image img;
         img.header = img_msg->header;
@@ -89,7 +90,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
             trackerData[i].readImage(ptr->image.rowRange(ROW * i, ROW * (i + 1)), img_msg->header.stamp.toSec());
         else
         {
-            if (EQUALIZE)
+            if (EQUALIZE)       //默认为true
             {
                 cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
                 clahe->apply(ptr->image.rowRange(ROW * i, ROW * (i + 1)), trackerData[i].cur_img);
@@ -214,10 +215,10 @@ int main(int argc, char **argv)
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
     readParameters(n);
 
-    for (int i = 0; i < NUM_OF_CAM; i++)
+    for (int i = 0; i < NUM_OF_CAM; i++)        //每一个相机定义一个trackerData实例，初始化每个相机内参。
         trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
-    if(FISHEYE)
+    if(FISHEYE)     //先不管。
     {
         for (int i = 0; i < NUM_OF_CAM; i++)
         {

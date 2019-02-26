@@ -18,6 +18,7 @@ int FOCAL_LENGTH;
 int FISHEYE;
 bool PUB_THIS_FRAME;
 
+//封装ros读取参数服务器参数。
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -34,6 +35,9 @@ T readParam(ros::NodeHandle &n, std::string name)
     return ans;
 }
 
+//利用opencv中的FileStorage类，将yaml文件加载到内存fsSettings
+//然后设置一些全局变量，实现参数动态配置节点。
+//其实可以直接使用参数服务器数据。
 void readParameters(ros::NodeHandle &n)
 {
     std::string config_file;
