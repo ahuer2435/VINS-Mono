@@ -66,6 +66,10 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         PUB_THIS_FRAME = false;
 
     cv_bridge::CvImageConstPtr ptr;
+    //可以参考：https://github.com/ros-perception/vision_opencv/issues/175,https://github.com/ros/common_msgs/pull/107
+    //8UC1：代表是的1个通道，8位bit位，存储内容不确定，可以使灰度、深度、亮度等，不是一种具体的颜色格式。
+    //mono8：代表单色8bit位通道，是一种颜色格式，可认为是8UC1的子集，存储的是灰度值。
+    //有些cv接口中需要指定具体颜色格式，即mono8类型，但是数据源可能是8UCx格式，这就需要写代码转化。
     if (img_msg->encoding == "8UC1")        //有必要区别吗?，不明白
     {
         sensor_msgs::Image img;
