@@ -39,6 +39,12 @@ bool init_feature = 0;
 bool init_imu = 1;
 double last_imu_t = 0;
 
+//利用imu信息计算当前位姿（世界坐标系下位置tmp_P和速度tmp_V）
+/*
+1. tmp_Q： 世界坐标系下imu的姿态
+2. imu中加速度是body下的，需要转化为世界坐标系下的，转化之前减去bias。
+3. 参考：https://www.cnblogs.com/glxin/p/9851909.html
+*/
 void predict(const sensor_msgs::ImuConstPtr &imu_msg)
 {
     double t = imu_msg->header.stamp.toSec();
@@ -94,6 +100,12 @@ void update()
         predict(tmp_imu_buf.front());
 
 }
+/*
+feature     imu
+1           1.1,2
+2           2.1,3
+3           3.1,4
+*/
 
 std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>>
 getMeasurements()
@@ -105,6 +117,7 @@ getMeasurements()
         if (imu_buf.empty() || feature_buf.empty())
             return measurements;
 
+        //最早的特征点时间晚于最晚的imu时间，表示没有合适的imu与特征点匹配。确保目前两个队列有交集。
         if (!(imu_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td))
         {
             //ROS_WARN("wait for imu, only should happen at the beginning");
@@ -112,6 +125,7 @@ getMeasurements()
             return measurements;
         }
 
+        //确保与特征点匹配的imu的时间戳小于特征点的时间戳。
         if (!(imu_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td))
         {
             ROS_WARN("throw img, only should happen at the beginning");
@@ -130,11 +144,13 @@ getMeasurements()
         IMUs.emplace_back(imu_buf.front());
         if (IMUs.empty())
             ROS_WARN("no imu between two image");
+        //IMUs中的imu时间戳最后一个外，都小于特征点的时间戳，这是特征点与imu的匹配结果。
         measurements.emplace_back(IMUs, img_msg);
     }
     return measurements;
 }
 
+//imu_buf 按时间戳有小到大排列。
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
     if (imu_msg->header.stamp.toSec() <= last_imu_t)
@@ -161,7 +177,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     }
 }
 
-
+//feature_buf 按时间戳有小到大排列。
 void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
 {
     if (!init_feature)
@@ -176,6 +192,7 @@ void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
     con.notify_one();
 }
 
+//异常时的状态重置。
 void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 {
     if (restart_msg->data == true)
