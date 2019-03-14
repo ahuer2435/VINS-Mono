@@ -1,3 +1,8 @@
+/*
+ * 读取benchmark_publisher/config/MH_05_difficult/data.csv，并发布出来。文件存储的是参考值。
+ * 即实际位置值，相对应的是算法估计出来的值，一般所求的都是估计值，估计值越接近参考值，算法精度越好。
+*/
+
 #include <cstdio>
 #include <vector>
 #include <ros/ros.h>
